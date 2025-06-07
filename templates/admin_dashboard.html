@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Administración - Pollo Salsero</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .navbar-custom { background-color: #8B4513; } /* Accent color */
+        .navbar-custom .navbar-brand, .navbar-custom .nav-link { color: #FFD700; } /* Primary color */
+        .navbar-custom .nav-link:hover { color: #FFA500; } /* Secondary color */
+        .card { margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,.05); }
+        .card-header { background-color: #FFD700; color: #8B4513; font-weight: bold; border-bottom: 1px solid #dee2e6; }
+        .order-item { border-bottom: 1px dashed #eee; padding: 10px 0; display: flex; justify-content: space-between; align-items: center; }
+        .order-item:last-child { border-bottom: none; }
+        .status-badge { padding: .4em .6em; border-radius: .25rem; font-size: 0.8em; font-weight: bold; }
+        .status-pending { background-color: #ffc107; color: #333; } /* warning */
+        .status-confirmed { background-color: #28a745; color: #fff; } /* success */
+        .status-delivered { background-color: #6c757d; color: #fff; } /* secondary */
+        .status-cancelled { background-color: #dc3545; color: #fff; } /* danger */
+        .notification-area { position: fixed; top: 20px; right: 20px; z-index: 1050; }
+        .alert-new-order { animation: fadeInOut 5s forwards; }
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(-20px); }
+            10% { opacity: 1; transform: translateY(0); }
+            90% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-custom">
+        <a class="navbar-brand" href="{{ url_for('admin.index') }}">Admin Pollo Salsero</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item active">
+                    <a class="nav-link" href="{{ url_for('admin_dashboard') }}">Dashboard <span class="sr-only">(current)</span></a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin.index') }}">Panel de Administración</a>
+                </li>
+            </ul>
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <span class="nav-link">Hola, {{ current_user.username }}</span>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('admin_logout') }}">Cerrar Sesión</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1>Dashboard de Pedidos</h1>
+
+        <div class="notification-area" id="notificationArea">
+            <!-- Las notificaciones de nuevos pedidos irán aquí -->
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        Pedidos Recientes
+                        <button class="btn btn-sm btn-outline-secondary float-right" onclick="location.reload();">
+                            <i class="fas fa-sync-alt"></i> Actualizar
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="ordersList">
+                            {% if orders %}
+                                {% for order in orders %}
+                                    <div class="order-item" id="order-{{ order.id }}">
+                                        <div>
+                                            <strong>Pedido #{{ order.id }}</strong><br>
+                                            Cliente: {{ order.customer_name }} ({{ order.customer_phone }})<br>
+                                            Total: ${{ order.total_amount | round(2) }}<br>
+                                            Fecha: {{ order.order_date.strftime('%Y-%m-%d %H:%M') }}
+                                        </div>
+                                        <div>
+                                            <span class="status-badge status-{{ order.status }}">{{ order.status.capitalize() }}</span>
+                                            <button class="btn btn-sm btn-info ml-2" onclick="window.location.href = '{{ url_for('orderadminview.edit_view', id=order.id) }}'">Ver Detalles</button>
+                                            <!-- Botones para cambiar estado si quieres un control rápido desde aquí -->
+                                            <div class="btn-group ml-2">
+                                                <button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                    Cambiar Estado
+                                                </button>
+                                                <div class="dropdown-menu">
+                                                    <a class="dropdown-item" href="#" onclick="updateOrderStatus({{ order.id }}, 'pending')">Pendiente</a>
+                                                    <a class="dropdown-item" href="#" onclick="updateOrderStatus({{ order.id }}, 'confirmed')">Confirmado</a>
+                                                    <a class="dropdown-item" href="#" onclick="updateOrderStatus({{ order.id }}, 'delivered')">Entregado</a>
+                                                    <a class="dropdown-item" href="#" onclick="updateOrderStatus({{ order.id }}, 'cancelled')">Cancelado</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-center text-muted">No hay pedidos recientes.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+</body>
+</html>
